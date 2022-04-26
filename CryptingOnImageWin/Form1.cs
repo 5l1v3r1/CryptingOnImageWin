@@ -1,9 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Globalization;
-using System;
-using System.IO;
-using System.Text;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace CryptingOnImageWin
 {
@@ -105,7 +103,7 @@ namespace CryptingOnImageWin
 			return chars;
 		}
 
-		private byte[] StringBinaryToByteArray(string stringBinary)
+		private byte[] BinaryToByteArray(string stringBinary)
 		{
 			int numOfBytes = stringBinary.Length / 8;
 			byte[] bytes = new byte[numOfBytes];
@@ -116,7 +114,7 @@ namespace CryptingOnImageWin
 			return bytes;
 		}
 
-		private short[] StringBinaryToShorts(string stringBinary)
+		private short[] BinaryToShorts(string stringBinary)
 		{
 			int numOfShorts = stringBinary.Length / 16;
 			short[] shorts = new short[numOfShorts];
@@ -127,6 +125,21 @@ namespace CryptingOnImageWin
 			return shorts;
 		}
 
+		private int BinaryToInt(string stringBinary)
+		{
+			return Convert.ToInt32(stringBinary, 2);
+		}
+
+		private byte BinaryToByte(string stringBinary)
+		{
+			return Convert.ToByte(stringBinary, 2);
+		}
+
+		private ushort BinaryToUshort(string stringBinary)
+		{
+			return Convert.ToUInt16(stringBinary, 2);
+		}
+
 		private byte[] CharToBytes(char ch)
 		{
 			return BitConverter.GetBytes(ch);
@@ -135,6 +148,45 @@ namespace CryptingOnImageWin
 		private short CharToShort(char ch)
 		{
 			return Convert.ToInt16(ch);
+		}
+
+		public static string ToBinary(byte x)
+		{
+			char[] buff = new char[8];
+
+			for (int i = 7; i >= 0; i--)
+			{
+				int mask = 1 << i;
+				buff[7 - i] = (x & mask) != 0 ? '1' : '0';
+			}
+
+			return new string(buff);
+		}
+
+		public static string ToBinary(ushort x)
+		{
+			char[] buff = new char[16];
+
+			for (int i = 15; i >= 0; i--)
+			{
+				int mask = 1 << i;
+				buff[15 - i] = (x & mask) != 0 ? '1' : '0';
+			}
+
+			return new string(buff);
+		}
+
+		public static string ToBinary(int x)
+		{
+			char[] buff = new char[32];
+
+			for (int i = 31; i >= 0; i--)
+			{
+				int mask = 1 << i;
+				buff[31 - i] = (x & mask) != 0 ? '1' : '0';
+			}
+
+			return new string(buff);
 		}
 
 		public String ToBinary(byte[] data)
@@ -216,7 +268,7 @@ namespace CryptingOnImageWin
 								string firstData1 = aklenecekBinary.Substring(0, 15);
 								//string firstData2 = aklenecekBinary.Substring(0, 7);
 								string yenidata = firstData1 + eklenecekCharBinary.Substring(15, 1);// hata burda
-								byte yeniBytes = StringBinaryToByteArray(yenidata).First();
+								byte yeniBytes = BinaryToByteArray(yenidata).First();
 								yeniByteData[q] = yeniBytes;
 							}
 							y -= 2;
@@ -254,230 +306,62 @@ namespace CryptingOnImageWin
 		{
 			dataStr = ConvertTurkishCharsToEnglish(dataStr);
 			char[] chars = dataStr.ToCharArray();
-			int pixelCount = bitmap1.Width * bitmap1.Height;
-			int dataCount = chars.Length;
-			if (dataCount * 24 > pixelCount)
+			//int pixelCount = bitmap1.Width * bitmap1.Height;
+
+			//if (chars.Length * 24 > pixelCount)
+			//{
+			//	MessageBox.Show("Uyarı!", "Şifrelenecek data image içerisine sığmıyor", MessageBoxButtons.OK);
+			//	return;
+			//}
+
+			// Bitmap'in bitlerini kilitle. 
+			Rectangle rect = new Rectangle(0, 0, bitmap1.Width, bitmap1.Height);
+			System.Drawing.Imaging.BitmapData bmpData =
+				bitmap1.LockBits(rect, System.Drawing.Imaging.ImageLockMode.ReadWrite,
+				bitmap1.PixelFormat);
+
+			// İlk satırın adresini alın.
+			IntPtr ptr = bmpData.Scan0;
+
+			// Bitmap'in baytlarını tutacak bir dizi bildirin. // 3 * witdh * height
+			int bytes = Math.Abs(bmpData.Stride) * bitmap1.Height;
+			byte[] rgbValues = new byte[bytes];
+
+			// RGB değerlerini diziye kopyalayın.
+			System.Runtime.InteropServices.Marshal.Copy(ptr, rgbValues, 0, bytes);
+
+			string bn = ToBinary(chars.Length);
+			string s = "";
+			for (int i = 0; i < bn.Length; i++)
 			{
-				MessageBox.Show("Uyarı!", "Şifrelenecek data image içerisine sığmıyor", MessageBoxButtons.OK);
-				return;
+				char c = bn[i];
+				s += c;
 			}
-			//byte[] dataBtesArr = BitConverter.GetBytes(dataCount);
-			//int n = Convert.ToInt32(ToBinary(dataBtesArr),2);
-			bitmap1.SetPixel(0, 0, Color.Empty);
-			bitmap1.SetPixel(0, 0, Color.FromArgb(dataCount));
+			//int nt = BinaryToInt(bnryy);
+			byte[] bytDizi = BinaryToByteArray(s);
+			rgbValues[24] = bytDizi[0];
+			rgbValues[25] = bytDizi[1];
+			rgbValues[26] = bytDizi[2];
+			rgbValues[27] = bytDizi[3];
 
-			//string fileName = @"C:\Users\AKR3P\source\repos\CryptingOnImageWin\CryptingOnImageWin\bin\Debug\net6.0-windows";
-			//bitmap1.Save(Directory.GetFiles(fileName).FirstOrDefault("daghan.png"));
-			//bitmap1.Dispose();
-			//MessageBox.Show(">>  R:" + bitmap1.GetPixel(0, 0).R + " G:" + bitmap1.GetPixel(0, 0).G + " B:" + bitmap1.GetPixel(0, 0).B+" ToArgb:"+bitmap1.GetPixel(0,0).ToArgb(), "Tamam Tamam Tebrikler! ilk adımı geçtiniz >>", MessageBoxButtons.OK);
-
-			for (int i = 0; i < dataCount; i++)
+			// Her üçüncü değeri 255'e ayarlayın. 24bpp bitmap kırmızı görünecektir.
+			bool IsLastChar = false;
+			for (int j = 32; j < rgbValues.Length; j++)
 			{
-				bool Isi = true;
-				//if (chars[i] == '■')
-				//{
-				//	break;
-				//}
-				for (int x = 0; x < bitmap1.Width; x++)
+				for (int c = 0; c < chars.Length; c++)
 				{
-					if (x != 0 && x % bitmap1.Width == 0)
-						break;
-					for (int y = 1; y < bitmap1.Height; y++)
+					byte chrShrt = Convert.ToByte(chars[c]);
+
+					string bnry = ToBinary(chrShrt);
+					for (int r = 0; r < 8; r++)
 					{
-						if (y != 0 && y % bitmap1.Height == 0)
-							break;
-						byte r = bitmap1.GetPixel(x, y).R;
-						byte g = bitmap1.GetPixel(x, y).G;
-						byte b = bitmap1.GetPixel(x, y).B;
-						y++;
-						if (y != 0 && y % bitmap1.Height == 0)
-							break;
-						byte r1 = bitmap1.GetPixel(x, y).R;
-						byte g1 = bitmap1.GetPixel(x, y).G;
-						byte b1 = bitmap1.GetPixel(x, y).B;
-						y++;
-						if (y != 0 && y % bitmap1.Height == 0)
-							break;
-						byte r2 = bitmap1.GetPixel(x, y).R;
-						byte g2 = bitmap1.GetPixel(x, y).G;
-						byte b2 = bitmap1.GetPixel(x, y).B;
-
-						byte[] renkler = new byte[] { r, g, b, r1, g1, b1, r2, g2, b2 };
-
-						if (Isi)
-						{
-							byte writeCharBytes = Convert.ToByte(chars[i]);
-							char[] eklenecekCharBinary = ToBinary(new byte[] { writeCharBytes }).ToCharArray();
-							byte[] yeniByteData = new byte[renkler.Length];
-							string[] yeniStringData = new string[renkler.Length];
-							for (int q = 0; q < yeniByteData.Length - 1; q++)
-							{
-
-								//if (q < 8)
-								//{
-								string strBnry = ToBinary(new byte[] { renkler[q] }).Substring(0, 7);
-								//byte[] writeByte = BitConverter.GetBytes(renkler[q]);
-								//string aklenecekBinary = ToBinary(writeByte);
-								////char[] changeChars = aklenecekBinary.ToCharArray();
-								////string firstData1 = aklenecekBinary.Substring(0, 7);
-								//string firstData1 = aklenecekBinary.Substring(0, 7);
-								//string firstData2 = aklenecekBinary.Substring(0, 7);
-								string yenidata = strBnry + eklenecekCharBinary[q];//.Substring(q, 1);// hata burda
-								yeniStringData[q] = yenidata;
-								//byte yeniBytes = StringBinaryToByteArray(yenidata).First();
-								//yeniByteData[q] = yeniBytes;
-								//byte yeniByte = Convert.ToByte(eklenecekCharBinary, 2);
-								yeniByteData[q] = Convert.ToByte(yenidata, 2);
-								//}
-								//else
-								//{
-								//	yeniStringData[q] = "";
-								//	yeniByteData[q] = renkler[q];
-								//}								
-							}
-							yeniStringData[8] = ToBinary(new byte[] { yeniByteData[8] });
-							yeniByteData[8] = renkler[8];
-
-							y -= 2;
-							r = yeniByteData[0];
-							g = yeniByteData[1];
-							b = yeniByteData[2];
-							bitmap1.SetPixel(x, y, Color.FromArgb(r, g, b));
-							y++;
-							if (y != 0 && y % bitmap1.Height == 0)
-								break;
-							r1 = yeniByteData[3];
-							g1 = yeniByteData[4];
-							b1 = yeniByteData[5];
-							bitmap1.SetPixel(x, y, Color.FromArgb(r1, g1, b1));
-							y++;
-							if (y != 0 && y % bitmap1.Height == 0)
-								break;
-							r2 = yeniByteData[6];
-							g2 = yeniByteData[7];
-							b2 = yeniByteData[8];
-							bitmap1.SetPixel(x, y, Color.FromArgb(r2, g2, b2));
-							Isi = false;
-						}
-						if (chars[i] == '+')
-						{
-							break;
-						}
+						string rgbStr = ToBinary(rgbValues[j]).Substring(0, 7);
+						rgbValues[j] = BinaryToByte(rgbStr + bnry[r]);
+						j++;
 					}
-					if (chars[i] == '+')
+					if (chrShrt == 43)
 					{
-						break;
-					}
-				}
-				if (chars[i] == '+')
-				{
-					break;
-				}
-			}
-			string fileName = Txt_Name.Text + ".png";
-
-			bitmap1.Save(fileName);
-			//OpenImage(fileName);
-			//bitmap1.Dispose();
-			MessageBox.Show("Başarılı", "Tebrikler! İşlem başarılı", MessageBoxButtons.OK);
-			ReadImage(bitmap1);
-		}
-
-		private void ReadImage(Bitmap bitmap1)
-		{
-			richTextBox1.Text += "\n---\n";
-
-			byte R = bitmap1.GetPixel(0, 0).R;
-			byte G = bitmap1.GetPixel(0, 0).G;
-			byte B = bitmap1.GetPixel(0, 0).B;
-
-			//string Sr = ToBinary(new byte[] { R });
-			//string Sg = ToBinary(new byte[] { G });
-			//string Sb = ToBinary(new byte[] { B });
-			string RGB = ToBinary(new byte[] { R, G, B });
-			int RGBint = Convert.ToInt32(RGB, 2);
-			//char[] RGBcharr = RGB.ToCharArray();
-			//int RGBLength = RGB.Length;
-
-			//int Ir = Convert.ToInt32(Sr, 2);
-			//int Ig = Convert.ToInt32(Sg, 2);
-			//int Ib = Convert.ToInt32(Sb, 2);
-
-			//int count = Convert.ToInt32(RGB);
-			//------------------------------
-			for (int i = 0; i < RGBint; i++)
-			{
-				bool IsLastChar = false;
-				for (int x = 0; x < bitmap1.Width; x++)
-				{
-					if (x != 0 && x % bitmap1.Width == 0)
-						break;
-					for (int y = 1; y < bitmap1.Height; y++)
-					{
-						if (y != 0 && y % bitmap1.Height == 0)
-							break;
-						byte r = bitmap1.GetPixel(x, y).R;
-						byte g = bitmap1.GetPixel(x, y).G;
-						byte b = bitmap1.GetPixel(x, y).B;
-						y++;
-						if (y != 0 && y % bitmap1.Height == 0)
-							break;
-						byte r1 = bitmap1.GetPixel(x, y).R;
-						byte g1 = bitmap1.GetPixel(x, y).G;
-						byte b1 = bitmap1.GetPixel(x, y).B;
-						y++;
-						if (y != 0 && y % bitmap1.Height == 0)
-							break;
-						byte r2 = bitmap1.GetPixel(x, y).R;
-						byte g2 = bitmap1.GetPixel(x, y).G;
-						byte b2 = bitmap1.GetPixel(x, y).B;
-						//							  1  0	1	0	1	0	1	1	1
-						byte[] renkler = new byte[] { r, g, b, r1, g1, b1, r2, g2, b2 };
-						char[] renklerStr = new char[] {
-							//ToBinary(new byte[] { r })
-							//.Substring(7,1), // 0
-							//ToBinary(new byte[] { g })
-							//.Substring(7,1), // 1
-							//ToBinary(new byte[] { b })
-							//.Substring(7,1), // 2
-							//ToBinary(new byte[] { r1 })
-							//.Substring(7,1), // 3
-							//ToBinary(new byte[] { g1 })
-							//.Substring(7,1), // 4
-							//ToBinary(new byte[] { b1 })
-							//.Substring(7,1), // 5
-							//ToBinary(new byte[] { r2 })
-							//.Substring(7,1), // 6
-							//ToBinary(new byte[] { g2 })
-							//.Substring(7,1), // 7
-							//ToBinary(new byte[] { b2 })
-							//.Substring(7,1), // 8
-							ToBinary(new byte[] { r }).Last(),
-							ToBinary(new byte[] { g }).Last(),
-							ToBinary(new byte[] { b }).Last(),
-							ToBinary(new byte[] { r1 }).Last(),
-							ToBinary(new byte[] { g1 }).Last(),
-							ToBinary(new byte[] { b1 }).Last(),
-							ToBinary(new byte[] { r2 }).Last(),
-							ToBinary(new byte[] { g2 }).Last(),
-							ToBinary(new byte[] { b2 }).Last(),
-							};
-						string totalStr = "";
-
-						for (int t = 0; t < renkler.Length - 1; t++)
-						{
-							totalStr += renklerStr[t];
-						}
-						int number = Convert.ToInt32(totalStr, 2);
-						richTextBox1.Text += Convert.ToChar(number);
-						if (number == 43)
-						{
-							IsLastChar = true;
-							break;
-						}
-					}
-					if (IsLastChar)
-					{
+						IsLastChar = true;
 						break;
 					}
 				}
@@ -486,7 +370,111 @@ namespace CryptingOnImageWin
 					break;
 				}
 			}
+
+			//// RGB değerlerini bitmap'e geri kopyalayın
+			System.Runtime.InteropServices.Marshal.Copy(rgbValues, 0, ptr, bytes);
+
+			//// Bitlerin kilidini aç.
+			bitmap1.UnlockBits(bmpData);
+
+			//// Değiştirilen resmi çizin.
+			//PaintEventArgs e = new(Graphics.FromImage(bitmap1), rect);
+			//e.Graphics.DrawImage(bitmap1, bitmap1.Width, bitmap1.Height);
+
+
+			//string fileName = Txt_Name.Text + ".png";
+
+			//bitmap1.Save(fileName);
+			////OpenImage(fileName);
+			////bitmap1.Dispose();
 			MessageBox.Show("Başarılı", "Tebrikler! İşlem başarılı", MessageBoxButtons.OK);
+			ReadImage(bitmap1);
+		}
+
+		private void ReadImage(Bitmap bitmap1)
+		{
+			richTextBox1.Text += "\n---\n";
+
+			Rectangle rect = new Rectangle(0, 0, bitmap1.Width, bitmap1.Height);
+			System.Drawing.Imaging.BitmapData bmpData =
+				bitmap1.LockBits(rect, System.Drawing.Imaging.ImageLockMode.ReadWrite,
+				bitmap1.PixelFormat);
+
+			// İlk satırın adresini alın.
+			IntPtr ptr = bmpData.Scan0;
+
+			// Bitmap'in baytlarını tutacak bir dizi bildirin. // 3 * witdh * height
+			int bytes = Math.Abs(bmpData.Stride) * bitmap1.Height;
+			byte[] rgbValues = new byte[bytes];
+
+			// RGB değerlerini diziye kopyalayın.
+			System.Runtime.InteropServices.Marshal.Copy(ptr, rgbValues, 0, bytes);
+
+			string ss = ToBinary(rgbValues[24]) + ToBinary(rgbValues[25]) + ToBinary(rgbValues[26]) + ToBinary(rgbValues[27]);
+			int nt = BinaryToInt(ss);
+			// Her üçüncü değeri 255'e ayarlayın. 24bpp bitmap kırmızı görünecektir.
+			bool IsLastChar = false;
+			for (int j = 32; j < rgbValues.Length; j++)
+			{
+				for (int c = 0; c < nt; c++)
+				{
+					string s = "";
+					for (int i = 0; i < 8; i++)
+					{
+						s += ToBinary(rgbValues[j]).Last();
+						j++;
+					}
+					byte bnryByte = BinaryToByte(s);
+					richTextBox1.Text += Convert.ToChar(bnryByte);
+					if (bnryByte == 43)
+					{
+						IsLastChar = true;
+						break;
+					}
+
+				}
+				if (IsLastChar)
+				{
+					break;
+				}
+			}
+
+			//// RGB değerlerini bitmap'e geri kopyalayın
+			//System.Runtime.InteropServices.Marshal.Copy(rgbValues, 0, ptr, bytes);
+
+			//// Bitlerin kilidini aç.
+			//bitmap1.UnlockBits(bmpData);
+
+			// Değiştirilen resmi çizin.
+			//PaintEventArgs e = new(Graphics.FromImage(bitmap1), rect);
+			//e.Graphics.DrawImage(bitmap1, bitmap1.Width, bitmap1.Height);
+
+
+			MessageBox.Show("Başarılı", "Tebrikler! İşlem başarılı", MessageBoxButtons.OK);
+		}
+
+		private void SetPixel_Example(PaintEventArgs e, Bitmap myBitmap)
+		{
+
+			// Create a Bitmap object from a file.
+			//Bitmap myBitmap = new Bitmap("Grapes.jpg");
+
+			// Draw myBitmap to the screen.
+			e.Graphics.DrawImage(myBitmap, 0, 0, myBitmap.Width,
+				myBitmap.Height);
+
+			// Set each pixel in myBitmap to black.
+			for (int Xcount = 0; Xcount < myBitmap.Width; Xcount++)
+			{
+				for (int Ycount = 0; Ycount < myBitmap.Height; Ycount++)
+				{
+					myBitmap.SetPixel(Xcount, Ycount, Color.Black);
+				}
+			}
+
+			// Draw myBitmap to the screen again.
+			e.Graphics.DrawImage(myBitmap, myBitmap.Width, 0,
+				myBitmap.Width, myBitmap.Height);
 		}
 
 		private List<byte> ReaderImageByte(Bitmap bitmap1)
