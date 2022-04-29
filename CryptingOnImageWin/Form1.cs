@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Drawing.Imaging;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
@@ -16,6 +17,11 @@ namespace CryptingOnImageWin
 		private static string _privateKey;
 		private static string _publicKey;
 		private static UnicodeEncoding _encoder = new UnicodeEncoding();
+		Bitmap myBitmap;
+		ImageCodecInfo myImageCodecInfo;
+		System.Drawing.Imaging.Encoder myEncoder;
+		EncoderParameter myEncoderParameter;
+		EncoderParameters myEncoderParameters;
 
 		private static void RSA()
 		{
@@ -75,7 +81,7 @@ namespace CryptingOnImageWin
 			{
 				Bitmap bmp = new Bitmap(openFileDialog1.FileName);
 				//Task.Run(() => ImageConvertToBasicImage6(bmp, richTextBox1));
-				ImageConvertToBasicImage6_2(bmp, richTextBox1.Text);
+				WriteDataOnImage(bmp, richTextBox1.Text);
 			}
 		}
 
@@ -86,9 +92,11 @@ namespace CryptingOnImageWin
 
 			if (openFileDialog1.ShowDialog() == DialogResult.OK)
 			{
+				//FileStream fileStream = new FileStream(openFileDialog1.FileName,FileMode.Open);
+
 				Bitmap bmp = new Bitmap(openFileDialog1.FileName);
 				//Task.Run(() => ReadImage(bmp));
-				ReadImage(bmp);
+				ReadDataInImage(bmp);
 			}
 		}
 
@@ -302,51 +310,39 @@ namespace CryptingOnImageWin
 			bitmap1.Dispose();
 			MessageBox.Show("Başarılı", "Tebrikler! İşlem başarılı", MessageBoxButtons.OK);
 		}
-		private void ImageConvertToBasicImage6_2(Bitmap bitmap1, string dataStr)
+
+		private void WriteDataOnImage(Bitmap bitmap1, string dataStr)
 		{
 			dataStr = ConvertTurkishCharsToEnglish(dataStr);
 			char[] chars = dataStr.ToCharArray();
-			//int pixelCount = bitmap1.Width * bitmap1.Height;
 
-			//if (chars.Length * 24 > pixelCount)
-			//{
-			//	MessageBox.Show("Uyarı!", "Şifrelenecek data image içerisine sığmıyor", MessageBoxButtons.OK);
-			//	return;
-			//}
-
-			// Bitmap'in bitlerini kilitle. 
 			Rectangle rect = new Rectangle(0, 0, bitmap1.Width, bitmap1.Height);
-			System.Drawing.Imaging.BitmapData bmpData =
-				bitmap1.LockBits(rect, System.Drawing.Imaging.ImageLockMode.ReadWrite,
+			BitmapData bmpData =
+				bitmap1.LockBits(rect, ImageLockMode.ReadWrite,
 				bitmap1.PixelFormat);
 
-			// İlk satırın adresini alın.
 			IntPtr ptr = bmpData.Scan0;
 
-			// Bitmap'in baytlarını tutacak bir dizi bildirin. // 3 * witdh * height
 			int bytes = Math.Abs(bmpData.Stride) * bitmap1.Height;
 			byte[] rgbValues = new byte[bytes];
 
-			// RGB değerlerini diziye kopyalayın.
 			System.Runtime.InteropServices.Marshal.Copy(ptr, rgbValues, 0, bytes);
 
-			string bn = ToBinary(chars.Length);
+			string charbnry = ToBinary(chars.Length);
 			string s = "";
-			for (int i = 0; i < bn.Length; i++)
+			for (int i = 0; i < charbnry.Length; i++)
 			{
-				char c = bn[i];
+				char c = charbnry[i];
 				s += c;
 			}
-			//int nt = BinaryToInt(bnryy);
 			byte[] bytDizi = BinaryToByteArray(s);
-			rgbValues[24] = bytDizi[0];
-			rgbValues[25] = bytDizi[1];
-			rgbValues[26] = bytDizi[2];
-			rgbValues[27] = bytDizi[3];
+			rgbValues[56] = bytDizi[0];
+			rgbValues[57] = bytDizi[1];
+			rgbValues[58] = bytDizi[2];
+			rgbValues[59] = bytDizi[3];
 
-			// Her üçüncü değeri 255'e ayarlayın. 24bpp bitmap kırmızı görünecektir.
 			bool IsLastChar = false;
-			for (int j = 32; j < rgbValues.Length; j++)
+			for (int j = 64; j < rgbValues.Length; j++)
 			{
 				for (int c = 0; c < chars.Length; c++)
 				{
@@ -371,50 +367,47 @@ namespace CryptingOnImageWin
 				}
 			}
 
-			//// RGB değerlerini bitmap'e geri kopyalayın
 			System.Runtime.InteropServices.Marshal.Copy(rgbValues, 0, ptr, bytes);
 
-			//// Bitlerin kilidini aç.
 			bitmap1.UnlockBits(bmpData);
 
-			//// Değiştirilen resmi çizin.
-			//PaintEventArgs e = new(Graphics.FromImage(bitmap1), rect);
-			//e.Graphics.DrawImage(bitmap1, bitmap1.Width, bitmap1.Height);
+			PaintEventArgs e = new(Graphics.FromImage(bitmap1), rect);
+			e.Graphics.DrawImage(bitmap1, bitmap1.Width, bitmap1.Height);
 
+			MemoryStream ms = new MemoryStream();
+			bitmap1.Save(ms, ImageFormat.Png);
+			using (FileStream file = new FileStream(Txt_Name.Text + ".png", FileMode.Create, System.IO.FileAccess.Write))
+			{
+				ms.WriteTo(file);
+				ms.Close();
+			}
 
-			//string fileName = Txt_Name.Text + ".png";
-
-			//bitmap1.Save(fileName);
-			////OpenImage(fileName);
-			////bitmap1.Dispose();
-			MessageBox.Show("Başarılı", "Tebrikler! İşlem başarılı", MessageBoxButtons.OK);
-			ReadImage(bitmap1);
+			bitmap1.Dispose();
+			MessageBox.Show("Tebrikler! İşlem başarılı", "Başarılı", MessageBoxButtons.OK);
 		}
 
-		private void ReadImage(Bitmap bitmap1)
+		private void ReadDataInImage(Bitmap bitmap1)
 		{
-			richTextBox1.Text += "\n---\n";
+			richTextBox1.Text += "\n----------------------------\n";
 
 			Rectangle rect = new Rectangle(0, 0, bitmap1.Width, bitmap1.Height);
-			System.Drawing.Imaging.BitmapData bmpData =
-				bitmap1.LockBits(rect, System.Drawing.Imaging.ImageLockMode.ReadWrite,
+			var bmpData =
+				bitmap1.LockBits(rect, ImageLockMode.ReadWrite,
 				bitmap1.PixelFormat);
 
-			// İlk satırın adresini alın.
 			IntPtr ptr = bmpData.Scan0;
 
-			// Bitmap'in baytlarını tutacak bir dizi bildirin. // 3 * witdh * height
 			int bytes = Math.Abs(bmpData.Stride) * bitmap1.Height;
+
 			byte[] rgbValues = new byte[bytes];
 
-			// RGB değerlerini diziye kopyalayın.
 			System.Runtime.InteropServices.Marshal.Copy(ptr, rgbValues, 0, bytes);
 
-			string ss = ToBinary(rgbValues[24]) + ToBinary(rgbValues[25]) + ToBinary(rgbValues[26]) + ToBinary(rgbValues[27]);
+			string ss = ToBinary(rgbValues[56]) + ToBinary(rgbValues[57]) + ToBinary(rgbValues[58]) + ToBinary(rgbValues[59]);
 			int nt = BinaryToInt(ss);
-			// Her üçüncü değeri 255'e ayarlayın. 24bpp bitmap kırmızı görünecektir.
+
 			bool IsLastChar = false;
-			for (int j = 32; j < rgbValues.Length; j++)
+			for (int j = 64; j < rgbValues.Length; j++)
 			{
 				for (int c = 0; c < nt; c++)
 				{
@@ -437,20 +430,23 @@ namespace CryptingOnImageWin
 				{
 					break;
 				}
+
 			}
+			bitmap1.Dispose();
+			MessageBox.Show("Tebrikler! İşlem başarılı", "Başarılı", MessageBoxButtons.OK);
+		}
 
-			//// RGB değerlerini bitmap'e geri kopyalayın
-			//System.Runtime.InteropServices.Marshal.Copy(rgbValues, 0, ptr, bytes);
-
-			//// Bitlerin kilidini aç.
-			//bitmap1.UnlockBits(bmpData);
-
-			// Değiştirilen resmi çizin.
-			//PaintEventArgs e = new(Graphics.FromImage(bitmap1), rect);
-			//e.Graphics.DrawImage(bitmap1, bitmap1.Width, bitmap1.Height);
-
-
-			MessageBox.Show("Başarılı", "Tebrikler! İşlem başarılı", MessageBoxButtons.OK);
+		private static ImageCodecInfo GetEncoderInfo(String mimeType)
+		{
+			int j;
+			ImageCodecInfo[] encoders;
+			encoders = ImageCodecInfo.GetImageEncoders();
+			for (j = 0; j < encoders.Length; ++j)
+			{
+				if (encoders[j].MimeType == mimeType)
+					return encoders[j];
+			}
+			return null;
 		}
 
 		private void SetPixel_Example(PaintEventArgs e, Bitmap myBitmap)
