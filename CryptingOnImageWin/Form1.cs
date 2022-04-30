@@ -124,13 +124,13 @@ namespace CryptingOnImageWin
 		public static void SignDetachedResource(string URIString, string XmlSigFileName, RSA Key)
 		{
 			// Create a SignedXml object.
-			SignedXml signedXml = new SignedXml();
+			SignedXml signedXml = new();
 
 			// Assign the key to the SignedXml object.
 			signedXml.SigningKey = Key;
 
 			// Create a reference to be signed.
-			Reference reference = new Reference();
+			Reference reference = new();
 
 			// Add the passed URI to the reference object.
 			reference.Uri = URIString;
@@ -139,7 +139,7 @@ namespace CryptingOnImageWin
 			signedXml.AddReference(reference);
 
 			// Add an RSAKeyValue KeyInfo (optional; helps recipient find key to validate).
-			KeyInfo keyInfo = new KeyInfo();
+			KeyInfo keyInfo = new();
 			keyInfo.AddClause(new RSAKeyValue((RSA)Key));
 			signedXml.KeyInfo = keyInfo;
 
@@ -152,7 +152,7 @@ namespace CryptingOnImageWin
 
 			// Save the signed XML document to a file specified
 			// using the passed string.
-			XmlTextWriter xmltw = new XmlTextWriter(XmlSigFileName, new UTF8Encoding(false));
+			XmlTextWriter xmltw = new(XmlSigFileName, new UTF8Encoding(false));
 			xmlDigitalSignature.WriteTo(xmltw);
 			xmltw.Close();
 		}
